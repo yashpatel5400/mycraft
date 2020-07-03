@@ -60,6 +60,26 @@ struct Character {
     glm::vec2 m_velocity;
 };
 
+Character character(glm::vec2(0.0, 0.0), glm::vec2(0.0, 0.0));
+
+void processInput(GLFWwindow* window) {
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+        glfwSetWindowShouldClose(window, true);
+    } 
+    else if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
+        character.m_velocity += glm::vec2(0.0, 1.0);
+    }
+    else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
+        character.m_velocity -= glm::vec2(1.0, 0.0);
+    }
+    else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
+        character.m_velocity -= glm::vec2(0.0, 1.0);
+    }
+    else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
+        character.m_velocity += glm::vec2(1.0, 0.0);
+    }
+}
+
 int main(int argc, char** argv) {
     FLAGS_stderrthreshold = 0;
     FLAGS_logtostderr = 0;
@@ -80,8 +100,6 @@ int main(int argc, char** argv) {
     GLenum err = glewInit();
     CHECK(GLEW_OK == err) << "Failed to initialize GLEW";
     GLuint program = gl_helper::compile(vertexShader, fragmentShader);
-
-    Character character(glm::vec2(0.0, 0.0), glm::vec2(0.0, 1.0));
 
     constexpr float kSquareSize = 0.25;
     float vertices[] = {
@@ -106,6 +124,8 @@ int main(int argc, char** argv) {
     float previousTime = glfwGetTime();;
     while (!glfwWindowShouldClose(window))
     {
+        processInput(window);
+
         float currentTime = glfwGetTime();
         float delta = currentTime - previousTime;
         character.tick(delta);
