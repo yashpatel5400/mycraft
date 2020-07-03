@@ -32,10 +32,12 @@ const char* vertexShader = R"(
 const char* fragmentShader = R"(
     #version 420 core
 
+    uniform vec3 u_color;
+
     out vec4 FragColor;
 
     void main() {
-        FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        FragColor = vec4(u_color, 1.0);
     }
 )";
 
@@ -118,21 +120,40 @@ int main(int argc, char** argv) {
     GLuint program = gl_helper::compile(vertexShader, fragmentShader);
 
     constexpr float kSquareSize = 0.25;
-    float vertices[] = {
-        -kSquareSize, -kSquareSize,
-        kSquareSize, -kSquareSize,
-        -kSquareSize, kSquareSize,
-        kSquareSize, kSquareSize
+    float charVertices[] = {
+        -kSquareSize, 0.0,
+        kSquareSize, 0.0,
+        -kSquareSize, 2 * kSquareSize,
+        kSquareSize, 2 * kSquareSize
     };
 
-    unsigned int VBO, VAO;
-    glGenVertexArrays(1, &VAO);
+    unsigned int VBO, charVAO;
+    glGenVertexArrays(1, &charVAO);
     glGenBuffers(1, &VBO);
 
-    glBindVertexArray(VAO);
+    glBindVertexArray(charVAO);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(charVertices), charVertices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    float groundVertices[] = {
+        -1.0, -1.0,
+        -1.0, 0.0,
+        1.0, -1.0,
+        1.0, 0.0,
+    };
+
+    unsigned int groundVBO, groundVAO;
+    glGenVertexArrays(1, &groundVAO);
+    glGenBuffers(1, &groundVBO);
+
+    glBindVertexArray(groundVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, groundVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(groundVertices), groundVertices, GL_STATIC_DRAW);
 
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
@@ -142,8 +163,9 @@ int main(int argc, char** argv) {
     {
         processInput(window);
 
+        float kTimeStep = 0.50; // without this, we may take too large steps and clip into objects
         float currentTime = glfwGetTime();
-        float delta = currentTime - previousTime;
+        float delta = kTimeStep * (currentTime - previousTime);
         character.tick(delta);
         previousTime = currentTime;
 
@@ -151,15 +173,24 @@ int main(int argc, char** argv) {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         glUseProgram(program);
-        gl_helper::setVec2(program, "u_charPos", character.m_position);
 
+        // draw the character
+        gl_helper::setVec2(program, "u_charPos", character.m_position);
+        gl_helper::setVec3(program, "u_color", glm::vec3(1.0, 0.0, 0.0));
+        glBindVertexArray(charVAO);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+
+        // draw the ground
+        gl_helper::setVec2(program, "u_charPos", glm::vec2(0.0));
+        gl_helper::setVec3(program, "u_color", glm::vec3(0.0, 1.0, 0.0));
+        glBindVertexArray(groundVAO);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    glDeleteVertexArrays(1, &VAO);
+    glDeleteVertexArrays(1, &charVAO);
     glDeleteBuffers(1, &VBO);
 
     glfwTerminate();
