@@ -47,11 +47,31 @@ float deltaTime = 0.0f; // time between current frame and last frame
 float lastFrame = 0.0f;
 
 struct Character {
+    Character() = default;
     Character(const glm::vec2& position,
               const glm::vec2& velocity) :
         m_position(position),
         m_velocity(velocity) {
 
+        constexpr float kSquareSize = 0.25;
+        float charVertices[] = {
+            -kSquareSize, 0.0,
+            kSquareSize, 0.0,
+            -kSquareSize, 2 * kSquareSize,
+            kSquareSize, 2 * kSquareSize
+        };
+
+        unsigned int VBO, m_VAO;
+        glGenVertexArrays(1, &m_VAO);
+        glGenBuffers(1, &VBO);
+
+        glBindVertexArray(m_VAO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(charVertices), charVertices, GL_STATIC_DRAW);
+
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
     }
 
     void tick(float delta) {
@@ -74,12 +94,86 @@ struct Character {
         m_position = position;
     }
 
+    void draw(const GLuint program) {
+        glUseProgram(program);
+        gl_helper::setVec2(program, "u_charPos", m_position);
+        gl_helper::setVec3(program, "u_color", glm::vec3(1.0, 0.0, 0.0));
+        glBindVertexArray(m_VAO);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    }
+
+    GLuint m_VAO;
     glm::vec2 m_position;
     glm::vec2 m_velocity;
 };
 
-Character character(glm::vec2(0.0, 0.0), glm::vec2(0.0, 0.0));
+// collidable platform, assumed axis aligned for now
+struct Platform {
+    Platform(const glm::vec2& topRight,
+             const glm::vec2& bottomLeft) :
+        m_topRight(topRight),
+        m_bottomLeft(bottomLeft) {
+        
+        float groundVertices[] = {
+            m_bottomLeft.x, m_bottomLeft.y,
+            m_topRight.x, m_bottomLeft.y,
+            m_bottomLeft.x, m_topRight.y,
+            m_topRight.x, m_topRight.y,
+        };
 
+        unsigned int VBO;
+        glGenVertexArrays(1, &m_VAO);
+        glGenBuffers(1, &VBO);
+
+        glBindVertexArray(m_VAO);
+
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(groundVertices), groundVertices, GL_STATIC_DRAW);
+
+        glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+    }
+
+    bool collides(const Character& character) const {
+        return true;
+    }
+
+    void draw(const GLuint program) const {
+        glUseProgram(program);
+        gl_helper::setVec2(program, "u_charPos", glm::vec2(0.0));
+        gl_helper::setVec3(program, "u_color", glm::vec3(0.0, 1.0, 0.0));
+        glBindVertexArray(m_VAO);
+        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    }
+
+    GLuint m_VAO;
+    glm::vec2 m_topRight;
+    glm::vec2 m_bottomLeft;
+};
+
+struct Scene {
+    Scene(const std::vector<Platform>& platforms) :
+        m_platforms(platforms) {};
+
+    bool collides(const Character& character) {
+        for (const auto& platform : m_platforms) {
+            if (platform.collides(character)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void draw(const GLuint program) {
+        for (const auto& platform : m_platforms) {
+            platform.draw(program);
+        }
+    }
+
+    std::vector<Platform> m_platforms;
+};
+
+Character character;
 void processInput(GLFWwindow* window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
@@ -119,46 +213,12 @@ int main(int argc, char** argv) {
     CHECK(GLEW_OK == err) << "Failed to initialize GLEW";
     GLuint program = gl_helper::compile(vertexShader, fragmentShader);
 
-    constexpr float kSquareSize = 0.25;
-    float charVertices[] = {
-        -kSquareSize, 0.0,
-        kSquareSize, 0.0,
-        -kSquareSize, 2 * kSquareSize,
-        kSquareSize, 2 * kSquareSize
-    };
-
-    unsigned int VBO, charVAO;
-    glGenVertexArrays(1, &charVAO);
-    glGenBuffers(1, &VBO);
-
-    glBindVertexArray(charVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(charVertices), charVertices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-    float groundVertices[] = {
-        -1.0, -1.0,
-        -1.0, 0.0,
-        1.0, -1.0,
-        1.0, 0.0,
-    };
-
-    unsigned int groundVBO, groundVAO;
-    glGenVertexArrays(1, &groundVAO);
-    glGenBuffers(1, &groundVBO);
-
-    glBindVertexArray(groundVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, groundVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(groundVertices), groundVertices, GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
+    Platform ground(glm::vec2(-1.0, -1.0), glm::vec2(1.0, 0.0));
+    std::vector platforms = { ground };
+    Scene scene(platforms);
 
     float previousTime = glfwGetTime();
+    character = Character(glm::vec2(0.0, 0.0), glm::vec2(0.0, 0.0));
     while (!glfwWindowShouldClose(window))
     {
         processInput(window);
@@ -172,26 +232,12 @@ int main(int argc, char** argv) {
         glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glUseProgram(program);
-
-        // draw the character
-        gl_helper::setVec2(program, "u_charPos", character.m_position);
-        gl_helper::setVec3(program, "u_color", glm::vec3(1.0, 0.0, 0.0));
-        glBindVertexArray(charVAO);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-
-        // draw the ground
-        gl_helper::setVec2(program, "u_charPos", glm::vec2(0.0));
-        gl_helper::setVec3(program, "u_color", glm::vec3(0.0, 1.0, 0.0));
-        glBindVertexArray(groundVAO);
-        glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+        character.draw(program);
+        scene.draw(program);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
-    glDeleteVertexArrays(1, &charVAO);
-    glDeleteBuffers(1, &VBO);
 
     glfwTerminate();
     return 0;
