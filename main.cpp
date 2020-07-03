@@ -53,7 +53,23 @@ struct Character {
     }
 
     void tick(float delta) {
-        m_position += m_velocity * delta;
+        // physical constants
+        constexpr float kG = 9.8; // gravitational constant m/s2
+        constexpr float kMu = 10.0; // assumed universal kinect friction unitless
+
+        // need to do the update atomically, so stored in temporary and update at end
+        glm::vec2 gravity(0.0, -kG);
+        glm::vec2 friction = m_velocity.x * glm::vec2(-kMu, 0.0);
+
+        glm::vec2 velocity = m_velocity + (gravity + friction) * delta;
+        glm::vec2 position = m_position + m_velocity * delta;
+
+        if (m_position.y <= 0.0) {
+            velocity.y = 0.0; // collides with the ground
+        }
+
+        m_velocity = velocity;
+        m_position = position;
     }
 
     glm::vec2 m_position;
@@ -121,7 +137,7 @@ int main(int argc, char** argv) {
     glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    float previousTime = glfwGetTime();;
+    float previousTime = glfwGetTime();
     while (!glfwWindowShouldClose(window))
     {
         processInput(window);
