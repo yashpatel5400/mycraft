@@ -8,10 +8,14 @@
 
 #pragma once
 
-#include <string>
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 #include <glog/logging.h>
+
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <iostream>
 
 namespace gl_helper {
     void checkCompileErrors(GLuint shader, std::string type)

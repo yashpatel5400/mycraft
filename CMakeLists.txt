@@ -14,6 +14,9 @@ find_package(glog CONFIG REQUIRED)
 
 add_executable(game
     main.cpp
+    Character.cpp
+    GlHelper.cpp
+    Scene.cpp
 )
 target_link_libraries(
     game 
