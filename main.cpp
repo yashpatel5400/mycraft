@@ -54,21 +54,21 @@ struct Character {
         m_velocity(velocity) {
 
         constexpr float kSquareSize = 0.25;
-        float charVertices[] = {
+        float vertices[] = {
             -kSquareSize, 0.0,
             kSquareSize, 0.0,
             -kSquareSize, 2 * kSquareSize,
             kSquareSize, 2 * kSquareSize
         };
 
-        unsigned int VBO, m_VAO;
+        unsigned int VBO;
         glGenVertexArrays(1, &m_VAO);
         glGenBuffers(1, &VBO);
 
         glBindVertexArray(m_VAO);
 
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(charVertices), charVertices, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
@@ -114,7 +114,7 @@ struct Platform {
         m_topRight(topRight),
         m_bottomLeft(bottomLeft) {
         
-        float groundVertices[] = {
+        float vertices[] = {
             m_bottomLeft.x, m_bottomLeft.y,
             m_topRight.x, m_bottomLeft.y,
             m_bottomLeft.x, m_topRight.y,
@@ -128,7 +128,7 @@ struct Platform {
         glBindVertexArray(m_VAO);
 
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
-        glBufferData(GL_ARRAY_BUFFER, sizeof(groundVertices), groundVertices, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
         glEnableVertexAttribArray(0);
