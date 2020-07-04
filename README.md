@@ -1,2 +1,2 @@
 # mycraft
-Minecraft clone (at least, that's the current plan)
+Just a basic game engine to play around
